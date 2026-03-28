@@ -9,6 +9,10 @@ function providerSlugForAdapterType(type: string): string {
       return "anthropic";
     case "codex_local":
       return "openai";
+    case "openrouter_local":
+      return "openrouter";
+    case "kilo_local":
+      return "kilo";
     default:
       return type;
   }

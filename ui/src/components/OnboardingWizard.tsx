@@ -44,6 +44,7 @@ import {
   Bot,
   Code,
   Gem,
+  Globe,
   ListTodo,
   Rocket,
   ArrowLeft,
@@ -66,7 +67,9 @@ type AdapterType =
   | "pi_local"
   | "cursor"
   | "http"
-  | "openclaw_gateway";
+  | "openclaw_gateway"
+  | "openrouter_local"
+  | "kilo_local";
 
 const DEFAULT_TASK_DESCRIPTION = `You are the CEO. You set the direction for the company.
 
@@ -125,6 +128,8 @@ export function OnboardingWizard() {
     useState(false);
   const [unsetAnthropicLoading, setUnsetAnthropicLoading] = useState(false);
   const [showMoreAdapters, setShowMoreAdapters] = useState(false);
+  const [openrouterApiKey, setOpenrouterApiKey] = useState("");
+  const [kiloApiKey, setKiloApiKey] = useState("");
 
   // Step 3
   const [taskTitle, setTaskTitle] = useState(
@@ -210,7 +215,9 @@ export function OnboardingWizard() {
     adapterType === "gemini_local" ||
     adapterType === "opencode_local" ||
     adapterType === "pi_local" ||
-    adapterType === "cursor";
+    adapterType === "cursor" ||
+    adapterType === "openrouter_local" ||
+    adapterType === "kilo_local";
   const effectiveAdapterCommand =
     command.trim() ||
     (adapterType === "codex_local"
@@ -223,6 +230,8 @@ export function OnboardingWizard() {
       ? "agent"
       : adapterType === "opencode_local"
       ? "opencode"
+      : adapterType === "openrouter_local" || adapterType === "kilo_local"
+      ? ""
       : "claude");
 
   useEffect(() => {
@@ -254,7 +263,7 @@ export function OnboardingWizard() {
     });
   }, [adapterModels, modelSearch]);
   const groupedModels = useMemo(() => {
-    if (adapterType !== "opencode_local") {
+    if (adapterType !== "opencode_local" && adapterType !== "openrouter_local" && adapterType !== "kilo_local") {
       return [
         {
           provider: "models",
@@ -289,6 +298,8 @@ export function OnboardingWizard() {
     setCommand("");
     setArgs("");
     setUrl("");
+    setOpenrouterApiKey("");
+    setKiloApiKey("");
     setAdapterEnvResult(null);
     setAdapterEnvError(null);
     setAdapterEnvLoading(false);
@@ -332,6 +343,12 @@ export function OnboardingWizard() {
           ? DEFAULT_CODEX_LOCAL_BYPASS_APPROVALS_AND_SANDBOX
           : defaultCreateValues.dangerouslyBypassSandbox
     });
+    if (adapterType === "openrouter_local") {
+      config.apiKey = openrouterApiKey;
+    }
+    if (adapterType === "kilo_local") {
+      config.apiKey = kiloApiKey;
+    }
     if (adapterType === "claude_local" && forceUnsetAnthropicApiKey) {
       const env =
         typeof config.env === "object" &&
@@ -446,6 +463,30 @@ export function OnboardingWizard() {
               ? "No OpenCode models discovered. Run `opencode models` and authenticate providers."
               : `Configured OpenCode model is unavailable: ${selectedModelId}`
           );
+          return;
+        }
+      }
+
+      if (adapterType === "openrouter_local") {
+        const selectedModelId = model.trim();
+        if (!selectedModelId) {
+          setError("OpenRouter requires a model selection.");
+          return;
+        }
+        if (!openrouterApiKey.trim()) {
+          setError("OpenRouter requires an API key.");
+          return;
+        }
+      }
+
+      if (adapterType === "kilo_local") {
+        const selectedModelId = model.trim();
+        if (!selectedModelId) {
+          setError("Kilo Code requires a model selection.");
+          return;
+        }
+        if (!kiloApiKey.trim()) {
+          setError("Kilo Code requires an API key.");
           return;
         }
       }
@@ -844,6 +885,18 @@ export function OnboardingWizard() {
                             desc: "Local Cursor agent"
                           },
                           {
+                            value: "openrouter_local" as const,
+                            label: "OpenRouter",
+                            icon: Globe,
+                            desc: "Access 300+ models via API"
+                          },
+                          {
+                            value: "kilo_local" as const,
+                            label: "Kilo Code",
+                            icon: Globe,
+                            desc: "AI coding agent via API"
+                          },
+                          {
                             value: "openclaw_gateway" as const,
                             label: "OpenClaw Gateway",
                             icon: Bot,
@@ -875,7 +928,7 @@ export function OnboardingWizard() {
                                 setModel(DEFAULT_CURSOR_LOCAL_MODEL);
                                 return;
                               }
-                              if (nextType === "opencode_local") {
+                              if (nextType === "opencode_local" || nextType === "openrouter_local" || nextType === "kilo_local") {
                                 if (!model.includes("/")) {
                                   setModel("");
                                 }
@@ -904,7 +957,9 @@ export function OnboardingWizard() {
                     adapterType === "gemini_local" ||
                     adapterType === "opencode_local" ||
                     adapterType === "pi_local" ||
-                    adapterType === "cursor") && (
+                    adapterType === "cursor" ||
+                    adapterType === "openrouter_local" ||
+                    adapterType === "kilo_local") && (
                     <div className="space-y-3">
                       <div>
                         <label className="text-xs text-muted-foreground mb-1 block">
@@ -927,7 +982,7 @@ export function OnboardingWizard() {
                                 {selectedModel
                                   ? selectedModel.label
                                   : model ||
-                                    (adapterType === "opencode_local"
+                                    (adapterType === "opencode_local" || adapterType === "openrouter_local" || adapterType === "kilo_local"
                                       ? "Select model (required)"
                                       : "Default")}
                               </span>
@@ -945,7 +1000,7 @@ export function OnboardingWizard() {
                               onChange={(e) => setModelSearch(e.target.value)}
                               autoFocus
                             />
-                            {adapterType !== "opencode_local" && (
+                            {adapterType !== "opencode_local" && adapterType !== "openrouter_local" && adapterType !== "kilo_local" && (
                               <button
                                 className={cn(
                                   "flex items-center gap-2 w-full px-2 py-1.5 text-sm rounded hover:bg-accent/50",
@@ -965,7 +1020,7 @@ export function OnboardingWizard() {
                                   key={group.provider}
                                   className="mb-1 last:mb-0"
                                 >
-                                  {adapterType === "opencode_local" && (
+                                  {(adapterType === "opencode_local" || adapterType === "openrouter_local" || adapterType === "kilo_local") && (
                                     <div className="px-2 py-1 text-[10px] uppercase tracking-wide text-muted-foreground">
                                       {group.provider} ({group.entries.length})
                                     </div>
@@ -986,7 +1041,7 @@ export function OnboardingWizard() {
                                         className="block w-full text-left truncate"
                                         title={m.id}
                                       >
-                                        {adapterType === "opencode_local"
+                                        {adapterType === "opencode_local" || adapterType === "openrouter_local" || adapterType === "kilo_local"
                                           ? extractModelName(m.id)
                                           : m.label}
                                       </span>
@@ -1003,6 +1058,58 @@ export function OnboardingWizard() {
                           </PopoverContent>
                         </Popover>
                       </div>
+                    </div>
+                  )}
+
+                  {adapterType === "openrouter_local" && (
+                    <div>
+                      <label className="text-xs text-muted-foreground mb-1 block">
+                        OpenRouter API Key
+                      </label>
+                      <input
+                        className="w-full rounded-md border border-border bg-transparent px-3 py-2 text-sm font-mono outline-none focus:ring-1 focus:ring-ring placeholder:text-muted-foreground/50"
+                        placeholder="sk-or-v1-..."
+                        type="password"
+                        value={openrouterApiKey}
+                        onChange={(e) => setOpenrouterApiKey(e.target.value)}
+                      />
+                      <p className="text-[11px] text-muted-foreground mt-1">
+                        Get your key at{" "}
+                        <a
+                          href="https://openrouter.ai/keys"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="underline hover:text-foreground"
+                        >
+                          openrouter.ai/keys
+                        </a>
+                      </p>
+                    </div>
+                  )}
+
+                  {adapterType === "kilo_local" && (
+                    <div>
+                      <label className="text-xs text-muted-foreground mb-1 block">
+                        Kilo API Key
+                      </label>
+                      <input
+                        className="w-full rounded-md border border-border bg-transparent px-3 py-2 text-sm font-mono outline-none focus:ring-1 focus:ring-ring placeholder:text-muted-foreground/50"
+                        placeholder="kilo-..."
+                        type="password"
+                        value={kiloApiKey}
+                        onChange={(e) => setKiloApiKey(e.target.value)}
+                      />
+                      <p className="text-[11px] text-muted-foreground mt-1">
+                        Get your key at{" "}
+                        <a
+                          href="https://kilocode.ai"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="underline hover:text-foreground"
+                        >
+                          kilocode.ai
+                        </a>
+                      </p>
                     </div>
                   )}
 
@@ -1072,52 +1179,61 @@ export function OnboardingWizard() {
                       {adapterEnvResult && adapterEnvResult.status === "fail" && (
                         <div className="rounded-md border border-border/70 bg-muted/20 px-2.5 py-2 text-[11px] space-y-1.5">
                           <p className="font-medium">Manual debug</p>
-                          <p className="text-muted-foreground font-mono break-all">
-                            {adapterType === "cursor"
-                              ? `${effectiveAdapterCommand} -p --mode ask --output-format json \"Respond with hello.\"`
-                              : adapterType === "codex_local"
-                              ? `${effectiveAdapterCommand} exec --json -`
-                              : adapterType === "gemini_local"
-                                ? `${effectiveAdapterCommand} --output-format json "Respond with hello."`
-                              : adapterType === "opencode_local"
-                                ? `${effectiveAdapterCommand} run --format json "Respond with hello."`
-                              : `${effectiveAdapterCommand} --print - --output-format stream-json --verbose`}
-                          </p>
-                          <p className="text-muted-foreground">
-                            Prompt:{" "}
-                            <span className="font-mono">Respond with hello.</span>
-                          </p>
-                          {adapterType === "cursor" ||
-                          adapterType === "codex_local" ||
-                          adapterType === "gemini_local" ||
-                          adapterType === "opencode_local" ? (
+                          {adapterType === "openrouter_local" || adapterType === "kilo_local" ? (
                             <p className="text-muted-foreground">
-                              If auth fails, set{" "}
-                              <span className="font-mono">
-                                {adapterType === "cursor"
-                                  ? "CURSOR_API_KEY"
-                                  : adapterType === "gemini_local"
-                                    ? "GEMINI_API_KEY"
-                                    : "OPENAI_API_KEY"}
-                              </span>{" "}
-                              in env or run{" "}
-                              <span className="font-mono">
-                                {adapterType === "cursor"
-                                  ? "agent login"
-                                  : adapterType === "codex_local"
-                                    ? "codex login"
-                                    : adapterType === "gemini_local"
-                                      ? "gemini auth"
-                                      : "opencode auth login"}
-                              </span>
-                              .
+                              Verify your {adapterType === "openrouter_local" ? "OpenRouter" : "Kilo"} API key is set in the adapter config.
+                              Visit <span className="font-mono">{adapterType === "openrouter_local" ? "https://openrouter.ai/keys" : "https://kilocode.ai"}</span> to manage keys.
                             </p>
                           ) : (
-                            <p className="text-muted-foreground">
-                              If login is required, run{" "}
-                              <span className="font-mono">claude login</span>{" "}
-                              and retry.
-                            </p>
+                            <>
+                              <p className="text-muted-foreground font-mono break-all">
+                                {adapterType === "cursor"
+                                  ? `${effectiveAdapterCommand} -p --mode ask --output-format json \"Respond with hello.\"`
+                                  : adapterType === "codex_local"
+                                  ? `${effectiveAdapterCommand} exec --json -`
+                                  : adapterType === "gemini_local"
+                                    ? `${effectiveAdapterCommand} --output-format json "Respond with hello."`
+                                  : adapterType === "opencode_local"
+                                    ? `${effectiveAdapterCommand} run --format json "Respond with hello."`
+                                  : `${effectiveAdapterCommand} --print - --output-format stream-json --verbose`}
+                              </p>
+                              <p className="text-muted-foreground">
+                                Prompt:{" "}
+                                <span className="font-mono">Respond with hello.</span>
+                              </p>
+                              {adapterType === "cursor" ||
+                              adapterType === "codex_local" ||
+                              adapterType === "gemini_local" ||
+                              adapterType === "opencode_local" ? (
+                                <p className="text-muted-foreground">
+                                  If auth fails, set{" "}
+                                  <span className="font-mono">
+                                    {adapterType === "cursor"
+                                      ? "CURSOR_API_KEY"
+                                      : adapterType === "gemini_local"
+                                        ? "GEMINI_API_KEY"
+                                        : "OPENAI_API_KEY"}
+                                  </span>{" "}
+                                  in env or run{" "}
+                                  <span className="font-mono">
+                                    {adapterType === "cursor"
+                                      ? "agent login"
+                                      : adapterType === "codex_local"
+                                        ? "codex login"
+                                        : adapterType === "gemini_local"
+                                          ? "gemini auth"
+                                          : "opencode auth login"}
+                                  </span>
+                                  .
+                                </p>
+                              ) : (
+                                <p className="text-muted-foreground">
+                                  If login is required, run{" "}
+                                  <span className="font-mono">claude login</span>{" "}
+                                  and retry.
+                                </p>
+                              )}
+                            </>
                           )}
                         </div>
                       )}

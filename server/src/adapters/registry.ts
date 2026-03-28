@@ -77,6 +77,8 @@ import {
 } from "hermes-paperclip-adapter";
 import { processAdapter } from "./process/index.js";
 import { httpAdapter } from "./http/index.js";
+import { openrouterAdapter } from "./openrouter/index.js";
+import { kiloAdapter } from "./kilo/index.js";
 
 const claudeLocalAdapter: ServerAdapterModule = {
   type: "claude_local",
@@ -193,6 +195,8 @@ const adaptersByType = new Map<string, ServerAdapterModule>(
     hermesLocalAdapter,
     processAdapter,
     httpAdapter,
+    openrouterAdapter,
+    kiloAdapter,
   ].map((a) => [a.type, a]),
 );
 
