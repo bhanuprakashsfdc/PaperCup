@@ -20,13 +20,26 @@ export async function listOpenRouterModels(): Promise<AdapterModel[]> {
     if (!res.ok) return cachedModels?.models ?? [];
 
     const body = (await res.json()) as {
-      data?: Array<{ id: string; name?: string }>;
+      data?: Array<{
+        id: string;
+        name?: string;
+        pricing?: { prompt?: string; completion?: string };
+      }>;
     };
 
     const models: AdapterModel[] = (body.data ?? [])
       .filter((m) => m.id && m.name)
-      .map((m) => ({ id: m.id, label: m.name! }))
-      .sort((a, b) => a.id.localeCompare(b.id, "en", { numeric: true, sensitivity: "base" }));
+      .map((m) => {
+        const prompt = parseFloat(m.pricing?.prompt ?? "1");
+        const completion = parseFloat(m.pricing?.completion ?? "1");
+        const isFree = prompt === 0 && completion === 0;
+        const name = m.name!.replace(/\s*\(free\)\s*$/i, "");
+        const label = isFree ? `${name} (free)` : name;
+        return { id: m.id, label };
+      })
+      .sort((a, b) =>
+        a.id.localeCompare(b.id, "en", { numeric: true, sensitivity: "base" }),
+      );
 
     cachedModels = { expiresAt: now + MODELS_CACHE_TTL_MS, models };
     return models;

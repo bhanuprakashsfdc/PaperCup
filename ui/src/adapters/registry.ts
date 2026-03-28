@@ -9,6 +9,7 @@ import { openClawGatewayUIAdapter } from "./openclaw-gateway";
 import { processUIAdapter } from "./process";
 import { httpUIAdapter } from "./http";
 import { openRouterLocalUIAdapter } from "./openrouter-local";
+import { kiloLocalUIAdapter } from "./kilo-local";
 
 const uiAdapters: UIAdapterModule[] = [
   claudeLocalUIAdapter,
@@ -21,6 +22,7 @@ const uiAdapters: UIAdapterModule[] = [
   processUIAdapter,
   httpUIAdapter,
   openRouterLocalUIAdapter,
+  kiloLocalUIAdapter,
 ];
 
 const adaptersByType = new Map<string, UIAdapterModule>(
