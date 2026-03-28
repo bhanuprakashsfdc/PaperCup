@@ -36,6 +36,7 @@ const SUPPORTED_ADVANCED_ADAPTER_TYPES = new Set<CreateConfigValues["adapterType
   "pi_local",
   "cursor",
   "openclaw_gateway",
+  "openrouter_local",
 ]);
 
 function createValuesForAdapterType(
@@ -52,6 +53,8 @@ function createValuesForAdapterType(
   } else if (adapterType === "cursor") {
     nextValues.model = DEFAULT_CURSOR_LOCAL_MODEL;
   } else if (adapterType === "opencode_local") {
+    nextValues.model = "";
+  } else if (adapterType === "openrouter_local") {
     nextValues.model = "";
   }
   return nextValues;
